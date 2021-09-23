@@ -24,3 +24,19 @@ export interface PROPS_POST {
     userPost: number
 
   }
+
+  export interface PROPS_NEWPOST {
+    title: string;
+    img: File | null;
+  }
+  export interface File extends Blob {
+    readonly lastModified: number;
+    readonly name: string;
+  }
+
+  export interface PROPS_LIKED {
+    id: number;
+    title: string;
+    current: number[];
+    new: number;
+  }
