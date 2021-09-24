@@ -40,3 +40,8 @@ export interface PROPS_POST {
     current: number[];
     new: number;
   }
+
+  export interface PROPS_COMMENT {
+    text: string;
+    post: number;
+  }
