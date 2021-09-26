@@ -38,7 +38,7 @@ export default function Comment({
             return coms.post === post.id
           })
           .map((com) => (
-            <div className="flex flex-wrap items-center mb-3">
+            <div className="flex flex-wrap items-center mb-3" key={com.id}>
               {
                 <img
                   className="w-10 h-10 object-cover rounded-full ml-3"
