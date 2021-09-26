@@ -2,17 +2,13 @@ import Layout from '../components/Layout'
 import axios from 'axios'
 import { useRouter } from 'next/router'
 import useSWR from 'swr'
-import React, { useState, useEffect, useContext } from 'react'
-import {
-  MY_PROFILE,
-  PROPS_NEWPOST,
-  PROPS_POST,
-  File,
-  PROPS_LIKED,
-  PROPS_COMMENT,
-} from '../types'
-import Modal from 'react-modal'
-import { nextTick } from 'process'
+import React, { useState, useEffect } from 'react'
+import { MY_PROFILE, PROPS_POST, File } from '../types'
+import Like from '../components/Like'
+
+import { filProfImg, filProfName } from '../lib/func'
+import PostModal from '../components/PostModal'
+import ProModal from '../components/ProModal'
 
 const fetcher = async (url) => {
   const res = await axios.get(`${process.env.NEXT_PUBLIC_RESTAPI_URL}${url}`, {
@@ -64,169 +60,13 @@ const MainPage: React.FC = () => {
   )
   const [modalIsOpen, setIsOpen] = useState(false)
   const [modalPro, setModalPro] = useState(false)
-  const [image, setImage] = useState<File | null>(null)
-  const [title, setTitle] = useState('')
   const [proImage, setProImage] = useState<File | null>(null)
   const [editUser, setEditUser] = useState('')
-  const [preview, setPreview] = useState('')
-  const [comOpen, setComOpen] = useState(false)
-  const [sendComment, setSendComment] = useState<PROPS_COMMENT>({
-    text: '',
-    post: 0,
-  })
   const router = useRouter()
-
-  const handlerEditPicture = () => {
-    const fileInput = document.getElementById('imageInput')
-    fileInput?.click()
-  }
-
-  //投稿に紐づいているidからプロフィール画像を抽出
-  const filProfImg = (id: number) => {
-    const filted = prof?.filter((pro) => {
-      return id == pro.userProfile
-    })
-    return filted && filted[0]?.img !== null
-      ? filted[0]?.img
-      : `${process.env.NEXT_PUBLIC_RESTAPI_URL}/media/avatars/default.png`
-  }
-  //投稿に紐づいているidからニックネームを抽出
-  const filProfName = (id: number) => {
-    const filted = prof?.filter((pro) => {
-      return id == pro.userProfile
-    })
-
-    return filted
-      ? filted[0]?.nickName
-      : `${process.env.NEXT_PUBLIC_RESTAPI_URL}/media/defaul.jpg`
-  }
-
-  const fetchAsyncCreatePost = async (newPost: PROPS_NEWPOST) => {
-    const uploadData = new FormData()
-    uploadData.append('title', newPost.title)
-    newPost.img && uploadData.append('img', newPost.img, newPost.img.name)
-    const res = await axios.post(
-      `${process.env.NEXT_PUBLIC_RESTAPI_URL}/api/post/`,
-      uploadData,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `JWT ${localStorage.localJWT}`,
-        },
-      }
-    )
-    setIsOpen(false)
-    setImage(null)
-    setTitle('')
-    setPreview('')
-    mutate()
-    comMute()
-    return res.data
-  }
 
   const fetchAsyncDletePost = async (postId: number) => {
     const res = await axios.delete(
       `${process.env.NEXT_PUBLIC_RESTAPI_URL}/api/post/${postId}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `JWT ${localStorage.localJWT}`,
-        },
-      }
-    )
-    mutate()
-    comMute()
-    return res.data
-  }
-
-  const fetchAsyncChangeProfile = async (userNum: number) => {
-    const uploadData = new FormData()
-    uploadData.append('nickName', editUser)
-    proImage && uploadData.append('img', proImage, proImage.name)
-    const res = await axios.put(
-      `${process.env.NEXT_PUBLIC_RESTAPI_URL}/api/profile/${userNum}/`,
-      uploadData,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `JWT ${localStorage.localJWT}`,
-        },
-      }
-    )
-    setModalPro(false)
-    setProImage(null)
-    setEditUser('')
-    myMute()
-    comMute()
-    return res.data
-  }
-
-  const handlerLiked = async (liked: PROPS_LIKED) => {
-    const currentLiked = liked.current
-    const uploadData = new FormData()
-
-    let isOverlapped = false
-    currentLiked.forEach((current) => {
-      if (current === liked.new) {
-        isOverlapped = true
-      } else {
-        uploadData.append('liked', String(current))
-      }
-    })
-
-    if (!isOverlapped) {
-      uploadData.append('liked', String(liked.new))
-    } else if (currentLiked.length === 1) {
-      uploadData.append('title', liked.title)
-      const res = await axios.put(
-        `${process.env.NEXT_PUBLIC_RESTAPI_URL}/api/post/${liked.id}/`,
-        uploadData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `JWT ${localStorage.localJWT}`,
-          },
-        }
-      )
-      mutate()
-      comMute()
-      return res.data
-    }
-    const res = await axios.patch(
-      `${process.env.NEXT_PUBLIC_RESTAPI_URL}/api/post/${liked.id}/`,
-      uploadData,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `JWT ${localStorage.localJWT}`,
-        },
-      }
-    )
-    mutate()
-    comMute()
-    return res.data
-  }
-  const postComment = async (id: number) => {
-    setSendComment({ ...sendComment, post: id })
-    console.log(sendComment)
-    const res = await axios.post(
-      `${process.env.NEXT_PUBLIC_RESTAPI_URL}/api/comment/`,
-      { text: sendComment.text, post: id },
-      {
-        headers: {
-          Authorization: `JWT ${localStorage.localJWT}`,
-        },
-      }
-    )
-    setSendComment({ ...sendComment, text: '' })
-    mutate()
-    comMute()
-    return res.data
-  }
-
-  const fetchAsyncDleteComment = async (id: number) => {
-    const res = await axios.delete(
-      `${process.env.NEXT_PUBLIC_RESTAPI_URL}/api/comment/${id}`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -300,238 +140,67 @@ const MainPage: React.FC = () => {
       </header>
       <Layout title="main-page">
         {allPost?.map((post) => (
-          <div className="max-w-lg w-full mb-14 border-2 pb-2" key={post.id}>
+          <div
+            className="max-w-lg w-full mb-14 border-2 pb-2 mt-4"
+            key={post.id}
+          >
             <div className="h-14 bg-gray-600 flex flex-wrap w-full items-center">
               <img
                 className="w-10 h-10 object-cover rounded-full ml-3"
-                src={prof ? filProfImg(post.userPost) : ''}
+                src={prof && filProfImg(prof, post.userPost)}
                 alt=""
               />
-              <p className="ml-2">{filProfName(post.userPost)}</p>
-              {myProf ? (
-                myProf[0].userProfile == post.userPost && (
-                  <button
-                    className="ml-auto mr-3"
-                    onClick={() => fetchAsyncDletePost(post.id)}
+              <p className="ml-2">{filProfName(prof, post.userPost)}</p>
+              {myProf && myProf[0].userProfile == post.userPost && (
+                <button
+                  className="ml-auto mr-3"
+                  onClick={() => fetchAsyncDletePost(post.id)}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
-                )
-              ) : (
-                <></>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
               )}
             </div>
             <img className="w-full h-80 object-cover" src={post.img} alt="" />
             <div className="text-xl mt-2 mb-2 ml-2">{post.title}</div>
             {/* いいね */}
-            <div className="flex flex-wrap items-center">
-              <input
-                type="checkbox"
-                checked={post.liked.some(
-                  (like) => like === (myProf && myProf[0]?.userProfile)
-                )}
-                onChange={() =>
-                  handlerLiked({
-                    id: post.id,
-                    title: post.title,
-                    current: post.liked,
-                    new: myProf ? myProf[0].userProfile : '',
-                  })
-                }
-              />
-              <p className="ml-3 mr-4">like:{post.liked.length}</p>
-              <button onClick={() => setComOpen(!comOpen)}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div>
-              {/* coment */}
-              {comOpen &&
-                comment &&
-                comment
-                  .filter((coms) => {
-                    return coms.post === post.id
-                  })
-                  .map((com) => (
-                    <div className="flex flex-wrap items-center mb-3">
-                      {
-                        <img
-                          className="w-10 h-10 object-cover rounded-full ml-3"
-                          src={filProfImg(com.userComment)}
-                          alt=""
-                        />
-                      }
-                      <p className="ml-2 mr-2">
-                        @{filProfName(com.userComment)}:{com.text}
-                      </p>
-                      {myProf && myProf[0].userProfile == com.userComment && (
-                        <button
-                          className="ml-auto"
-                          onClick={() => fetchAsyncDleteComment(com.id)}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-6 w-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-            </div>
-            {/* comentinput */}
-            {comOpen && (
-              <div className="flex flex-wrap items-center">
-                {
-                  <img
-                    className="w-10 h-10 object-cover rounded-full ml-3"
-                    src={filProfImg(myProf && myProf[0].userProfile)}
-                    alt=""
-                  />
-                }
-                <input
-                  className="text-black rounded-full h-6  ml-2"
-                  type="text"
-                  value={sendComment.text}
-                  onChange={(e) =>
-                    setSendComment({ ...sendComment, text: e.target.value })
-                  }
-                />
-                <button
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold px-4 rounded ml-2"
-                  onClick={() => {
-                    postComment(post.id)
-                    setSendComment({ ...sendComment, post: post.id })
-                  }}
-                >
-                  send
-                </button>
-              </div>
-            )}
+            <Like
+              myProf={myProf}
+              post={post}
+              mutate={mutate}
+              comMute={comMute}
+              prof={prof}
+              comment={comment}
+            />
           </div>
         ))}
       </Layout>
-      <Modal isOpen={modalIsOpen} style={modalStyle}>
-        <button
-          onClick={() => {
-            setIsOpen(false)
-            setPreview('')
-          }}
-          className="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded mb-10"
-        >
-          閉じる
-        </button>
-        <div>
-          <input
-            className="mb-5"
-            type="text"
-            placeholder="Please enter caption"
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <br />{' '}
-          <input
-            type="file"
-            className="mb-5"
-            id="imageInput"
-            onChange={(e) => {
-              setImage(e.target.files![0])
-              const { files } = e.target
-              setPreview(window.URL.createObjectURL(files[0]))
-            }}
-          />
-          <div className="max-w-lg w-full">
-            <img src={preview} className="w-full h-80 object-cover" />
-          </div>
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 border border-blue-700 rounded mb-10"
-            disabled={!title || !image}
-            onClick={async () =>
-              fetchAsyncCreatePost({ title: title, img: image })
-            }
-          >
-            送信
-          </button>
-        </div>
-      </Modal>
-
-      {/* profileedit */}
-      <Modal isOpen={modalPro} style={modalStyle} ariaHideApp={false}>
-        <button
-          onClick={() => {
-            setModalPro(false)
-          }}
-          className="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded mb-10"
-        >
-          閉じる
-        </button>
-        <div>
-          <p className="font-semibold text-xl">
-            ニックネーム：{myProf ? myProf[0].nickName : ''}
-          </p>
-          <input
-            className="mb-5"
-            type="text"
-            value={editUser}
-            placeholder="新しいニックネーム"
-            onChange={(e) => setEditUser(e.target.value)}
-          />
-          <br /> <p className="font-semibold text-xl">プロフィール画像</p>
-          <input
-            type="file"
-            className="mb-5"
-            id="imageInput"
-            onChange={(e) => {
-              setProImage(e.target.files![0])
-            }}
-          />
-          <br />
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 border border-blue-700 rounded mb-10"
-            disabled={!editUser}
-            onClick={async () =>
-              fetchAsyncChangeProfile(myProf ? myProf[0].id : '')
-            }
-          >
-            送信
-          </button>
-        </div>
-      </Modal>
+      <PostModal
+        modalIsOpen={modalIsOpen}
+        setIsOpen={setIsOpen}
+        mutate={mutate}
+        modalStyle={modalStyle}
+      />
+      <ProModal
+        setModalPro={setModalPro}
+        modalPro={modalPro}
+        myProf={myProf}
+        comMute={comMute}
+        modalStyle={modalStyle}
+        myMute={myMute}
+      />
     </>
   )
 }
